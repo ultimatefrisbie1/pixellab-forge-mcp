@@ -1,20 +1,42 @@
 {
   "name": "pixelforge-mcp",
   "version": "1.0.0",
-  "description": "",
+  "description": "MCP server for the PixelLab pixel art generation API",
   "main": "dist/index.js",
   "type": "module",
   "bin": {
     "pixelforge-mcp": "./dist/index.js"
   },
+  "files": [
+    "dist"
+  ],
   "scripts": {
     "build": "tsc",
-    "start": "node dist/index.js"
+    "start": "node dist/index.js",
+    "prepublishOnly": "npm run build"
   },
+  "keywords": [
+    "mcp",
+    "pixellab",
+    "pixel-art",
+    "ai",
+    "game-dev",
+    "sprites",
+    "tilesets",
+    "animation",
+    "model-context-protocol"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/rabbitcannon/pixelforge-mcp.git"
+  },
+  "license": "MIT",
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.29.0",
-    "@types/node": "^25.5.2",
-    "typescript": "^6.0.2",
     "zod": "^4.3.6"
+  },
+  "devDependencies": {
+    "@types/node": "^25.5.2",
+    "typescript": "^6.0.2"
   }
 }
