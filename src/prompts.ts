@@ -20,13 +20,13 @@ export interface PromptDef {
 export const prompts: PromptDef[] = [
   {
     name: "pf:help",
-    description: "Overview of PixelForge tools and how to use them",
+    description: "Overview of PixelLab Forge tools and how to use them",
     messages: () => [
       {
         role: "user",
         content: {
           type: "text",
-          text: `Give me a quick overview of what PixelForge can do and how to use it. Cover:
+          text: `Give me a quick overview of what PixelLab Forge can do and how to use it. Cover:
 - The main generation tools (generate_image, generate_with_style, generate_ui) and when to use each
 - Characters & objects (persistent vs one-off)
 - Animation options

@@ -1,4 +1,4 @@
-# PixelForge MCP
+# PixelLab Forge MCP
 
 MCP server for the PixelLab pixel art generation API. 47 tools covering image generation, characters, animation, tilesets, editing, rotation, and more.
 
@@ -10,7 +10,7 @@ src/
   tools.ts       - All 47 tool definitions with JSON schemas and handlers
   api-client.ts  - PixelLab REST client with auto-polling, retry, and job logging
   job-log.ts     - Persistent job log for crash recovery (stored in OS temp dir)
-  save-images.ts - Auto-saves base64 images from responses to ./pixelforge-output/
+  save-images.ts - Auto-saves base64 images from responses to ./pixellab-forge-output/
 ```
 
 ## Key Architecture Decisions
@@ -22,8 +22,8 @@ src/
   - Character/object/tileset endpoints use `text_guidance_scale`, `outline/shading/detail`, `color_image`
   - Legacy endpoints (pixflux, bitforge, skeleton, rotate, inpaint) use Python SDK field names
 - Background jobs auto-poll every 2s for up to 10 minutes with 3 retries on network failure.
-- Job IDs are logged to stderr and persisted to `$TMPDIR/pixelforge/jobs.json` for recovery.
-- Generated images are auto-saved to `./pixelforge-output/` in the working directory.
+- Job IDs are logged to stderr and persisted to `$TMPDIR/pixellab-forge/jobs.json` for recovery.
+- Generated images are auto-saved to `./pixellab-forge-output/` in the working directory.
 
 ## Git Identity
 

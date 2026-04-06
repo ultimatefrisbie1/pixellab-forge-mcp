@@ -83,7 +83,7 @@ export class PixelLabClient {
   }
 
   private async pollJob(jobId: string, endpoint: string): Promise<unknown> {
-    process.stderr.write(`[pixelforge-mcp] Background job started: ${jobId} (${endpoint})\n`);
+    process.stderr.write(`[pixellab-forge-mcp] Background job started: ${jobId} (${endpoint})\n`);
     logJobStart(jobId, endpoint);
 
     for (let i = 0; i < MAX_POLL_ATTEMPTS; i++) {
@@ -97,7 +97,7 @@ export class PixelLabClient {
         });
       } catch (err) {
         const message = err instanceof Error ? err.message : String(err);
-        process.stderr.write(`[pixelforge-mcp] Poll error for job ${jobId}: ${message}, retrying...\n`);
+        process.stderr.write(`[pixellab-forge-mcp] Poll error for job ${jobId}: ${message}, retrying...\n`);
 
         let recovered = false;
         for (let retry = 0; retry < MAX_RETRIES; retry++) {
@@ -110,7 +110,7 @@ export class PixelLabClient {
             recovered = true;
             break;
           } catch {
-            process.stderr.write(`[pixelforge-mcp] Retry ${retry + 1}/${MAX_RETRIES} failed for job ${jobId}\n`);
+            process.stderr.write(`[pixellab-forge-mcp] Retry ${retry + 1}/${MAX_RETRIES} failed for job ${jobId}\n`);
           }
         }
 

@@ -37,7 +37,7 @@ describe("MCP Server integration", () => {
     const collector = createCollector();
 
     const server = new Server(
-      { name: "pixelforge-mcp", version: "1.0.0" },
+      { name: "pixellab-forge-mcp", version: "1.0.0" },
       { capabilities: { tools: {} } },
     );
 
@@ -86,7 +86,7 @@ describe("MCP Server integration", () => {
 
     // Find initialize response
     const initResponse = messages.find((m: any) => m.id === 1) as any;
-    expect(initResponse.result.serverInfo.name).toBe("pixelforge-mcp");
+    expect(initResponse.result.serverInfo.name).toBe("pixellab-forge-mcp");
 
     // Find tools/list response
     const toolsResponse = messages.find((m: any) => m.id === 2) as any;

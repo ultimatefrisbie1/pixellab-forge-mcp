@@ -1,5 +1,5 @@
 node_modules/
-pixelforge-output/
+pixellab-forge-output/
 dist/
 .mcp.json
 .env

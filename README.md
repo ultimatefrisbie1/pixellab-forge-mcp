@@ -1,8 +1,8 @@
-# PixelForge MCP
+# PixelLab Forge MCP
 
 An MCP server that connects AI assistants to the [PixelLab](https://pixellab.ai) pixel art generation API. Generate sprites, tilesets, characters, animations, and more directly from Claude, Cursor, or any MCP-compatible client.
 
-Generated images are automatically saved to `./pixelforge-output/` in your project directory, ready to be moved into your game assets.
+Generated images are automatically saved to `./pixellab-forge-output/` in your project directory, ready to be moved into your game assets.
 
 ## Prerequisites
 
@@ -16,13 +16,13 @@ No installation needed. `npx` downloads and runs the package automatically on fi
 ### Claude Code (CLI)
 
 ```bash
-claude mcp add pixelforge-mcp -e PIXELLAB_API_KEY=your-api-key-here -- npx pixelforge-mcp
+claude mcp add pixellab-forge-mcp -e PIXELLAB_API_KEY=your-api-key-here -- npx pixellab-forge-mcp
 ```
 
 This adds it to the current project. To make it available across all your projects:
 
 ```bash
-claude mcp add pixelforge-mcp -s user -e PIXELLAB_API_KEY=your-api-key-here -- npx pixelforge-mcp
+claude mcp add pixellab-forge-mcp -s user -e PIXELLAB_API_KEY=your-api-key-here -- npx pixellab-forge-mcp
 ```
 
 That's it. Claude Code will start the server automatically when you begin a conversation.
@@ -37,9 +37,9 @@ Add to your config file:
 ```json
 {
   "mcpServers": {
-    "pixelforge-mcp": {
+    "pixellab-forge-mcp": {
       "command": "npx",
-      "args": ["pixelforge-mcp"],
+      "args": ["pixellab-forge-mcp"],
       "env": {
         "PIXELLAB_API_KEY": "your-api-key-here"
       }
@@ -55,9 +55,9 @@ Add to `.cursor/mcp.json`:
 ```json
 {
   "mcpServers": {
-    "pixelforge-mcp": {
+    "pixellab-forge-mcp": {
       "command": "npx",
-      "args": ["pixelforge-mcp"],
+      "args": ["pixellab-forge-mcp"],
       "env": {
         "PIXELLAB_API_KEY": "your-api-key-here"
       }
@@ -68,16 +68,16 @@ Add to `.cursor/mcp.json`:
 
 ### Other MCP Clients
 
-Any MCP client that supports stdio transport can use PixelForge. Set the command to `npx pixelforge-mcp` and pass `PIXELLAB_API_KEY` as an environment variable.
+Any MCP client that supports stdio transport can use PixelLab Forge. Set the command to `npx pixellab-forge-mcp` and pass `PIXELLAB_API_KEY` as an environment variable.
 
 ## Generated Images
 
-When a tool returns image data, PixelForge automatically saves the images as PNGs to `./pixelforge-output/` in whatever directory the MCP server is running from (usually your project root).
+When a tool returns image data, PixelLab Forge automatically saves the images as PNGs to `./pixellab-forge-output/` in whatever directory the MCP server is running from (usually your project root).
 
 Add this to your `.gitignore`:
 
 ```
-pixelforge-output/
+pixellab-forge-output/
 ```
 
 ## Available Tools (47)
@@ -240,7 +240,7 @@ For detailed size limits, style controls, endpoint comparison, and step-by-step 
 
 ### Prompt Commands
 
-PixelForge includes MCP prompt templates that appear as slash commands in supported clients (Claude Desktop, Cursor, etc.):
+PixelLab Forge includes MCP prompt templates that appear as slash commands in supported clients (Claude Desktop, Cursor, etc.):
 
 | Command | Description |
 |---------|-------------|
@@ -259,7 +259,7 @@ PixelForge includes MCP prompt templates that appear as slash commands in suppor
 - **Auto-polling**: Generation jobs are polled every 2 seconds for up to 10 minutes
 - **Retry on failure**: Network errors during polling are retried 3 times with backoff
 - **Job recovery**: If the connection drops, job IDs are logged to stderr and persisted to disk. Use `list_pending_jobs` to find them and `get_job_status` to retrieve results
-- **Image saving**: Generated images are automatically saved as PNGs to `./pixelforge-output/`
+- **Image saving**: Generated images are automatically saved as PNGs to `./pixellab-forge-output/`
 
 ## Testing
 

@@ -1,6 +1,6 @@
 # Prompting Guide
 
-How to get the best results from PixelForge through your AI assistant. Just describe what you want in plain language — the assistant picks the right tool and parameters automatically.
+How to get the best results from PixelLab Forge through your AI assistant. Just describe what you want in plain language — the assistant picks the right tool and parameters automatically.
 
 ## The Basics
 

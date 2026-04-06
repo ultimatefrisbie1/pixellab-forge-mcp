@@ -10,7 +10,7 @@ interface JobEntry {
   completed?: string;
 }
 
-const LOG_DIR = join(tmpdir(), "pixelforge");
+const LOG_DIR = join(tmpdir(), "pixellab-forge");
 const LOG_FILE = join(LOG_DIR, "jobs.json");
 const MAX_ENTRIES = 200;
 const TTL_HOURS = 24;

@@ -1,7 +1,7 @@
 import { writeFileSync, mkdirSync } from "node:fs";
 import { join } from "node:path";
 
-const OUTPUT_DIR = join(process.cwd(), "pixelforge-output");
+const OUTPUT_DIR = join(process.cwd(), "pixellab-forge-output");
 
 function ensureOutputDir() {
   mkdirSync(OUTPUT_DIR, { recursive: true });

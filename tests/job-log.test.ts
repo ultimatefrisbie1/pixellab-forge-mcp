@@ -12,7 +12,7 @@ import {
   getJobLog,
 } from "../src/job-log.js";
 
-const LOG_DIR = join(tmpdir(), "pixelforge");
+const LOG_DIR = join(tmpdir(), "pixellab-forge");
 const LOG_FILE = join(LOG_DIR, "jobs.json");
 
 describe("Job log", () => {
