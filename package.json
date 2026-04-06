@@ -32,6 +32,9 @@
     "type": "git",
     "url": "https://github.com/rabbitcannon/pixelforge-mcp.git"
   },
+  "engines": {
+    "node": ">=18.0.0"
+  },
   "license": "MIT",
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.29.0",
