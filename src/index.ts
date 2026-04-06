@@ -8,6 +8,7 @@ import {
 } from "@modelcontextprotocol/sdk/types.js";
 import { PixelLabClient } from "./api-client.js";
 import { tools } from "./tools.js";
+import { extractAndSaveImages } from "./save-images.js";
 
 const apiKey = process.env["PIXELLAB_API_KEY"];
 if (!apiKey) {
@@ -47,11 +48,23 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
 
   try {
     const result = await tool.handler(client, args);
-    return {
-      content: [
-        { type: "text" as const, text: JSON.stringify(result, null, 2) },
-      ],
-    };
+    const { savedFiles } = extractAndSaveImages(result, name);
+
+    const parts: Array<{ type: "text"; text: string }> = [];
+
+    if (savedFiles.length > 0) {
+      parts.push({
+        type: "text" as const,
+        text: `Saved ${savedFiles.length} image(s):\n${savedFiles.join("\n")}`,
+      });
+    }
+
+    parts.push({
+      type: "text" as const,
+      text: JSON.stringify(result, null, 2),
+    });
+
+    return { content: parts };
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
     return {

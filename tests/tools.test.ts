@@ -101,7 +101,7 @@ describe("Tool definitions", () => {
     });
   });
 
-  describe("Pro/v2 endpoint field names", () => {
+  describe("v2/Pro endpoints use no_background and seed (not guidance_scale/remove_background/ai_freedom)", () => {
     const v2Tools = [
       "generate_image",
       "generate_with_style",
@@ -110,21 +110,34 @@ describe("Tool definitions", () => {
       "interpolate_frames",
       "animate_with_text_v2",
       "edit_images",
-      "edit_image",
       "inpaint_v3",
     ];
 
     for (const name of v2Tools) {
-      it(`${name} uses v2 field names (not legacy)`, () => {
+      it(`${name} has no_background and seed, not guidance_scale/remove_background/ai_freedom`, () => {
         const tool = tools.find((t) => t.name === name)!;
         const props = Object.keys(tool.inputSchema.properties as Record<string, unknown>);
 
-        // V2 endpoints should NOT have legacy field names
-        expect(props).not.toContain("text_guidance_scale");
-        expect(props).not.toContain("no_background");
-        expect(props).not.toContain("color_image");
+        expect(props).toContain("no_background");
+        expect(props).toContain("seed");
+        expect(props).not.toContain("guidance_scale");
+        expect(props).not.toContain("remove_background");
+        expect(props).not.toContain("ai_freedom");
       });
     }
+  });
+
+  describe("edit_image uses correct field names per OpenAPI spec", () => {
+    it("has image, width, height (not reference_image, target_canvas_size)", () => {
+      const tool = tools.find((t) => t.name === "edit_image")!;
+      const props = Object.keys(tool.inputSchema.properties as Record<string, unknown>);
+      expect(props).toContain("image");
+      expect(props).toContain("width");
+      expect(props).toContain("height");
+      expect(props).not.toContain("reference_image");
+      expect(props).not.toContain("target_canvas_size");
+      expect(props).not.toContain("reference_image_size");
+    });
   });
 
   describe("Character/object endpoints", () => {
@@ -136,22 +149,33 @@ describe("Tool definitions", () => {
       expect(props.proportions.properties).toHaveProperty("name");
     });
 
-    it("animate_character has frame_count and style params", () => {
+    it("create_character_4dir uses text_guidance_scale not guidance_scale", () => {
+      const tool = tools.find((t) => t.name === "create_character_4dir")!;
+      const props = Object.keys(tool.inputSchema.properties as Record<string, unknown>);
+      expect(props).toContain("text_guidance_scale");
+      expect(props).not.toContain("guidance_scale");
+      expect(props).not.toContain("ai_freedom");
+    });
+
+    it("animate_character uses template_animation_id and style params", () => {
       const tool = tools.find((t) => t.name === "animate_character")!;
       const props = Object.keys(tool.inputSchema.properties as Record<string, unknown>);
-      expect(props).toContain("frame_count");
+      expect(props).toContain("template_animation_id");
       expect(props).toContain("outline");
       expect(props).toContain("shading");
       expect(props).toContain("detail");
+      expect(props).not.toContain("animation_type");
+      expect(props).not.toContain("frame_count");
     });
   });
 
   describe("inpaint_v3 uses correct field names", () => {
-    it("uses inpainting_image_size not image_size", () => {
+    it("has crop_to_mask and no_background, not inpainting_image_size", () => {
       const tool = tools.find((t) => t.name === "inpaint_v3")!;
       const props = Object.keys(tool.inputSchema.properties as Record<string, unknown>);
-      expect(props).toContain("inpainting_image_size");
-      expect(props).not.toContain("image_size");
+      expect(props).toContain("crop_to_mask");
+      expect(props).toContain("no_background");
+      expect(props).not.toContain("inpainting_image_size");
     });
   });
 });
