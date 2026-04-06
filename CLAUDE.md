@@ -10,17 +10,20 @@ src/
   tools.ts       - All 47 tool definitions with JSON schemas and handlers
   api-client.ts  - PixelLab REST client with auto-polling, retry, and job logging
   job-log.ts     - Persistent job log for crash recovery (stored in OS temp dir)
+  save-images.ts - Auto-saves base64 images from responses to ./pixelforge-output/
 ```
 
 ## Key Architecture Decisions
 
 - Uses the **low-level `Server` class** from `@modelcontextprotocol/sdk` (not `McpServer`) because the high-level API requires Zod schemas. We use raw JSON Schema objects instead.
 - SDK v1.29 uses **newline-delimited JSON** for stdio transport, not Content-Length framing.
-- **Two API generations** with different parameter names:
-  - **Pro/v2 endpoints**: `guidance_scale`, `remove_background`, `ai_freedom`
-  - **Legacy endpoints**: `text_guidance_scale`, `no_background`, `color_image`
+- **All tool schemas are verified against the OpenAPI spec** at `https://api.pixellab.ai/v2/openapi.json`. Key naming:
+  - v2 endpoints use `no_background` and `seed` (NOT `guidance_scale`, `remove_background`, or `ai_freedom`)
+  - Character/object/tileset endpoints use `text_guidance_scale`, `outline/shading/detail`, `color_image`
+  - Legacy endpoints (pixflux, bitforge, skeleton, rotate, inpaint) use Python SDK field names
 - Background jobs auto-poll every 2s for up to 10 minutes with 3 retries on network failure.
 - Job IDs are logged to stderr and persisted to `$TMPDIR/pixelforge/jobs.json` for recovery.
+- Generated images are auto-saved to `./pixelforge-output/` in the working directory.
 
 ## Git Identity
 
