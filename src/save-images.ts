@@ -30,9 +30,47 @@ function saveImage(base64: string, toolName: string, index: number, id?: string)
   return filepath;
 }
 
+/** Strip data URI prefix and any whitespace from base64 string so it's clean for the Claude API */
+function cleanBase64(data: string): string {
+  return data.replace(/^data:image\/\w+;base64,/, "").replace(/\s/g, "");
+}
+
+/** Validate that a base64 string decodes to a non-empty buffer with a valid image header */
+function isValidImageBase64(b64: string): boolean {
+  try {
+    const buf = Buffer.from(b64, "base64");
+    if (buf.length < 8) return false;
+    // Check for PNG magic bytes (89 50 4E 47)
+    const isPng = buf[0] === 0x89 && buf[1] === 0x50 && buf[2] === 0x4e && buf[3] === 0x47;
+    // Check for JPEG magic bytes (FF D8 FF)
+    const isJpeg = buf[0] === 0xff && buf[1] === 0xd8 && buf[2] === 0xff;
+    // Check for WebP (RIFF....WEBP)
+    const isWebp = buf[0] === 0x52 && buf[1] === 0x49 && buf[2] === 0x46 && buf[3] === 0x46;
+    // Check for GIF (GIF8)
+    const isGif = buf[0] === 0x47 && buf[1] === 0x49 && buf[2] === 0x46 && buf[3] === 0x38;
+    return isPng || isJpeg || isWebp || isGif;
+  } catch {
+    return false;
+  }
+}
+
+/** Detect MIME type from base64 data */
+function detectMimeType(b64: string): string {
+  try {
+    const buf = Buffer.from(b64, "base64");
+    if (buf.length >= 4) {
+      if (buf[0] === 0xff && buf[1] === 0xd8 && buf[2] === 0xff) return "image/jpeg";
+      if (buf[0] === 0x47 && buf[1] === 0x49 && buf[2] === 0x46) return "image/gif";
+      if (buf[0] === 0x52 && buf[1] === 0x49 && buf[2] === 0x46 && buf[3] === 0x46) return "image/webp";
+    }
+  } catch {}
+  return "image/png";
+}
+
 export interface ExtractedImage {
   base64: string;
   filePath: string;
+  mimeType: string;
 }
 
 /**
@@ -46,6 +84,17 @@ export function extractAndSaveImages(
 ): { images: ExtractedImage[]; result: unknown } {
   const images: ExtractedImage[] = [];
 
+  /** Save image to disk and add to inline list only if it has valid image headers */
+  function addImage(b64: string, toolLabel: string, index: number) {
+    const path = saveImage(b64, toolLabel, index);
+    if (isValidImageBase64(b64)) {
+      images.push({ base64: b64, filePath: path, mimeType: detectMimeType(b64) });
+    } else {
+      process.stderr.write(`[pixellab-forge-mcp] Warning: saved ${path} but base64 has no valid image header, skipping inline display\n`);
+      images.push({ base64: "", filePath: path, mimeType: "image/png" });
+    }
+  }
+
   if (!result || typeof result !== "object") {
     return { images, result };
   }
@@ -54,16 +103,15 @@ export function extractAndSaveImages(
 
   // Single image response: { image: { type: "base64", base64: "...", format: "png" } }
   if (isImageObj(data.image)) {
-    const b64 = (data.image as any).base64;
-    const path = saveImage(b64, toolName, 0);
-    images.push({ base64: b64, filePath: path });
+    const b64 = cleanBase64((data.image as any).base64);
+    addImage(b64, toolName, 0);
     stripBase64(data.image);
   }
 
   // Single image as direct base64 string: { image: "base64..." }
   if (typeof data.image === "string" && data.image.length > 100) {
-    const path = saveImage(data.image, toolName, 0);
-    images.push({ base64: data.image, filePath: path });
+    const b64 = cleanBase64(data.image);
+    addImage(b64, toolName, 0);
     data.image = "[base64 image data stripped]";
   }
 
@@ -71,13 +119,12 @@ export function extractAndSaveImages(
   if (Array.isArray(data.images)) {
     data.images.forEach((img: unknown, i: number) => {
       if (isImageObj(img)) {
-        const b64 = (img as any).base64;
-        const path = saveImage(b64, toolName, i);
-        images.push({ base64: b64, filePath: path });
+        const b64 = cleanBase64((img as any).base64);
+        addImage(b64, toolName, i);
         stripBase64(img);
       } else if (typeof img === "string" && img.length > 100) {
-        const path = saveImage(img, toolName, i);
-        images.push({ base64: img, filePath: path });
+        const b64 = cleanBase64(img);
+        addImage(b64, toolName, i);
         (data.images as any[])[i] = "[base64 image data stripped]";
       }
     });
@@ -87,9 +134,8 @@ export function extractAndSaveImages(
   if (Array.isArray(data.frames)) {
     data.frames.forEach((frame: unknown, i: number) => {
       if (isImageObj(frame)) {
-        const b64 = (frame as any).base64;
-        const path = saveImage(b64, toolName, i);
-        images.push({ base64: b64, filePath: path });
+        const b64 = cleanBase64((frame as any).base64);
+        addImage(b64, toolName, i);
         stripBase64(frame);
       }
     });
@@ -103,9 +149,8 @@ export function extractAndSaveImages(
       if (value && typeof value === "object") {
         const dirData = value as Record<string, unknown>;
         if (isImageObj(dirData.image)) {
-          const b64 = (dirData.image as any).base64;
-          const path = saveImage(b64, `${toolName}_${dir}`, i);
-          images.push({ base64: b64, filePath: path });
+          const b64 = cleanBase64((dirData.image as any).base64);
+          addImage(b64, `${toolName}_${dir}`, i);
           stripBase64(dirData.image);
           i++;
         }
@@ -119,9 +164,8 @@ export function extractAndSaveImages(
       if (tile && typeof tile === "object") {
         const t = tile as Record<string, unknown>;
         if (isImageObj(t.image)) {
-          const b64 = (t.image as any).base64;
-          const path = saveImage(b64, toolName, i);
-          images.push({ base64: b64, filePath: path });
+          const b64 = cleanBase64((t.image as any).base64);
+          addImage(b64, toolName, i);
           stripBase64(t.image);
         }
       }

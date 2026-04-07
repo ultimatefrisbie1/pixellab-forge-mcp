@@ -51,22 +51,39 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
 
   try {
     const result = await tool.handler(client, args);
+    process.stderr.write(`[pixellab-forge-mcp] Raw response keys for ${name}: ${result && typeof result === "object" ? JSON.stringify(Object.keys(result as object)) : typeof result}\n`);
     const { images, result: strippedResult } = extractAndSaveImages(result, name);
+    process.stderr.write(`[pixellab-forge-mcp] Extracted ${images.length} image(s), valid for inline: ${images.filter(i => i.base64.length > 0).length}\n`);
+    if (images.length > 0) {
+      const first = images[0];
+      process.stderr.write(`[pixellab-forge-mcp] First image: base64 length=${first.base64.length}, mime=${first.mimeType}, path=${first.filePath}\n`);
+    }
 
     const parts: Array<{ type: "text"; text: string } | { type: "image"; data: string; mimeType: string }> = [];
 
     if (images.length > 0) {
+      // Limit inline image blocks to avoid overwhelming the Claude API.
+      // All images are still saved to disk regardless.
+      const MAX_INLINE_IMAGES = 4;
+      const inlineImages = images.slice(0, MAX_INLINE_IMAGES);
+
       parts.push({
         type: "text" as const,
-        text: `Saved ${images.length} image(s):\n${images.map((img) => img.filePath).join("\n")}`,
+        text: `Saved ${images.length} image(s):\n${images.map((img) => img.filePath).join("\n")}${
+          images.length > MAX_INLINE_IMAGES
+            ? `\n\n(Showing first ${MAX_INLINE_IMAGES} of ${images.length} images inline. All images saved to disk.)`
+            : ""
+        }`,
       });
 
-      for (const img of images) {
-        parts.push({
-          type: "image" as const,
-          data: img.base64,
-          mimeType: "image/png",
-        });
+      for (const img of inlineImages) {
+        if (img.base64) {
+          parts.push({
+            type: "image" as const,
+            data: img.base64,
+            mimeType: img.mimeType,
+          });
+        }
       }
     }
 

@@ -109,7 +109,7 @@ export const tools: ToolDef[] = [
   },
   {
     name: "get_job_status",
-    description: "Check the status of a background job by its ID",
+    description: "Check the status of a background job and retrieve its results when complete. All creation tools return a job_id immediately — use this tool to poll for completion and get the generated images/data.",
     inputSchema: {
       type: "object",
       properties: {
@@ -143,7 +143,7 @@ export const tools: ToolDef[] = [
   {
     name: "generate_image",
     description:
-      "Generate pixel art from a text description. Supports reference images and style images for guidance.",
+      "Generate pixel art from a text description. The API auto-generates variants based on size: ≤42px → 64 images, 43-85px → 16, 86-170px → 4, >170px → 1. Use larger sizes for faster results with fewer variants. Supports reference images and style images for guidance.",
     inputSchema: {
       type: "object",
       properties: {

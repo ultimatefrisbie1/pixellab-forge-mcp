@@ -1,10 +1,10 @@
-import { logJobStart, logJobComplete, logJobFailed } from "./job-log.js";
+import { logJobStart } from "./job-log.js";
 
 const BASE_URL = "https://api.pixellab.ai/v2";
-const POLL_INTERVAL_MS = 2000;
-const MAX_POLL_ATTEMPTS = 300; // 10 minutes max
-const MAX_RETRIES = 3;
-const RETRY_DELAY_MS = 5000;
+
+function debugLog(msg: string) {
+  process.stderr.write(`[pixellab-forge-mcp] ${msg}\n`);
+}
 
 export class PixelLabClient {
   private apiKey: string;
@@ -59,11 +59,16 @@ export class PixelLabClient {
   }
 
   async post(path: string, body: unknown): Promise<unknown> {
+    const jsonBody = JSON.stringify(body);
+    debugLog(`POST ${path} — payload size: ${jsonBody.length} bytes`);
+
     const res = await fetch(`${BASE_URL}${path}`, {
       method: "POST",
       headers: this.headers(),
-      body: JSON.stringify(body),
+      body: jsonBody,
     });
+
+    debugLog(`POST ${path} — response status: ${res.status}`);
 
     if (res.status === 200) {
       return res.json();
@@ -72,80 +77,20 @@ export class PixelLabClient {
     if (res.status === 202) {
       const data = (await res.json()) as { job_id?: string; background_job_id?: string };
       const jobId = data.job_id ?? data.background_job_id;
+      debugLog(`POST ${path} — background job: ${jobId}`);
       if (jobId) {
-        return this.pollJob(jobId, path);
+        logJobStart(jobId, path);
       }
-      return data;
+      return {
+        status: "processing",
+        job_id: jobId,
+        endpoint: path,
+        message: `Job ${jobId} is processing. Use get_job_status with this job_id to check progress and retrieve results.`,
+      };
     }
 
     const text = await res.text();
+    debugLog(`POST ${path} — ERROR ${res.status}: ${text}`);
     throw new Error(`POST ${path} failed (${res.status}): ${text}`);
-  }
-
-  private async pollJob(jobId: string, endpoint: string): Promise<unknown> {
-    process.stderr.write(`[pixellab-forge-mcp] Background job started: ${jobId} (${endpoint})\n`);
-    logJobStart(jobId, endpoint);
-
-    for (let i = 0; i < MAX_POLL_ATTEMPTS; i++) {
-      await new Promise((resolve) => setTimeout(resolve, POLL_INTERVAL_MS));
-
-      let res: Response;
-      try {
-        res = await fetch(`${BASE_URL}/background-jobs/${jobId}`, {
-          method: "GET",
-          headers: this.headers(),
-        });
-      } catch (err) {
-        const message = err instanceof Error ? err.message : String(err);
-        process.stderr.write(`[pixellab-forge-mcp] Poll error for job ${jobId}: ${message}, retrying...\n`);
-
-        let recovered = false;
-        for (let retry = 0; retry < MAX_RETRIES; retry++) {
-          await new Promise((resolve) => setTimeout(resolve, RETRY_DELAY_MS * (retry + 1)));
-          try {
-            res = await fetch(`${BASE_URL}/background-jobs/${jobId}`, {
-              method: "GET",
-              headers: this.headers(),
-            });
-            recovered = true;
-            break;
-          } catch {
-            process.stderr.write(`[pixellab-forge-mcp] Retry ${retry + 1}/${MAX_RETRIES} failed for job ${jobId}\n`);
-          }
-        }
-
-        if (!recovered) {
-          logJobFailed(jobId);
-          throw new Error(
-            `Lost connection while polling job ${jobId} after ${MAX_RETRIES} retries. Use get_job_status with job_id "${jobId}" to retrieve the result later.`
-          );
-        }
-      }
-
-      if (res!.status === 423) {
-        continue;
-      }
-
-      if (!res!.ok) {
-        const text = await res!.text();
-        logJobFailed(jobId);
-        throw new Error(
-          `Job ${jobId} poll failed (${res!.status}): ${text}`
-        );
-      }
-
-      const data = (await res!.json()) as { status?: string };
-      if (data.status === "processing" || data.status === "pending") {
-        continue;
-      }
-
-      logJobComplete(jobId);
-      return data;
-    }
-
-    // Timed out but job may still finish - leave as pending in the log
-    throw new Error(
-      `Job ${jobId} is still processing after ${MAX_POLL_ATTEMPTS * POLL_INTERVAL_MS / 1000}s. Use get_job_status with job_id "${jobId}" to check on it later.`
-    );
   }
 }
