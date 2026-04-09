@@ -62,6 +62,12 @@ export class PixelLabClient {
     const jsonBody = JSON.stringify(body);
     debugLog(`POST ${path} — payload size: ${jsonBody.length} bytes`);
 
+    // Extract description for job logging
+    const desc = body && typeof body === "object"
+      ? (body as Record<string, unknown>).description as string | undefined
+        ?? (body as Record<string, unknown>).text as string | undefined
+      : undefined;
+
     const res = await fetch(`${BASE_URL}${path}`, {
       method: "POST",
       headers: this.headers(),
@@ -79,7 +85,7 @@ export class PixelLabClient {
       const jobId = data.job_id ?? data.background_job_id;
       debugLog(`POST ${path} — background job: ${jobId}`);
       if (jobId) {
-        logJobStart(jobId, path);
+        logJobStart(jobId, path, desc);
       }
       return {
         status: "processing",

@@ -12,7 +12,15 @@ import { PixelLabClient } from "./api-client.js";
 import { tools } from "./tools.js";
 import { prompts } from "./prompts.js";
 import { extractAndSaveImages } from "./save-images.js";
-import { getJobEndpoint } from "./job-log.js";
+import { getJobEndpoint, getJobDescription } from "./job-log.js";
+
+function slugify(text: string): string {
+  return text
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "_")
+    .replace(/^_|_$/g, "")
+    .slice(0, 60);
+}
 
 const apiKey = process.env["PIXELLAB_API_KEY"];
 if (!apiKey) {
@@ -65,15 +73,17 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
     let imageLabel = name;
     const desc = args.description ?? args.text;
     if (typeof desc === "string" && desc.length > 0) {
-      imageLabel = desc
-        .toLowerCase()
-        .replace(/[^a-z0-9]+/g, "_")  // non-alphanumeric → underscore
-        .replace(/^_|_$/g, "")         // trim leading/trailing underscores
-        .slice(0, 60);                 // cap length
+      imageLabel = slugify(desc);
     } else if (name === "get_job_status" && typeof args.job_id === "string") {
-      const endpoint = getJobEndpoint(args.job_id);
-      if (endpoint) {
-        imageLabel = endpoint.replace(/^\//, "").replace(/-/g, "_");
+      // Look up the original description stored when the job was created
+      const jobDesc = getJobDescription(args.job_id);
+      if (jobDesc) {
+        imageLabel = slugify(jobDesc);
+      } else {
+        const endpoint = getJobEndpoint(args.job_id);
+        if (endpoint) {
+          imageLabel = endpoint.replace(/^\//, "").replace(/-/g, "_");
+        }
       }
     }
 

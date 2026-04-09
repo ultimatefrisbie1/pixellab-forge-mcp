@@ -5,6 +5,7 @@ import { tmpdir } from "node:os";
 interface JobEntry {
   id: string;
   endpoint: string;
+  description?: string;
   status: "pending" | "completed" | "failed";
   created: string; // ISO timestamp
   completed?: string;
@@ -55,11 +56,12 @@ function prune(entries: JobEntry[]): JobEntry[] {
   return pruned;
 }
 
-export function logJobStart(jobId: string, endpoint: string) {
+export function logJobStart(jobId: string, endpoint: string, description?: string) {
   const entries = prune(readLog());
   entries.push({
     id: jobId,
     endpoint,
+    description,
     status: "pending",
     created: new Date().toISOString(),
   });
@@ -97,4 +99,9 @@ export function getJobLog(): JobEntry[] {
 export function getJobEndpoint(jobId: string): string | undefined {
   const entry = readLog().find((e) => e.id === jobId);
   return entry?.endpoint;
+}
+
+export function getJobDescription(jobId: string): string | undefined {
+  const entry = readLog().find((e) => e.id === jobId);
+  return entry?.description;
 }
