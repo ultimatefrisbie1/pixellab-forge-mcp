@@ -2,8 +2,8 @@ import { describe, it, expect } from "vitest";
 import { tools } from "../src/tools.js";
 
 describe("Tool definitions", () => {
-  it("registers all 47 tools", () => {
-    expect(tools.length).toBe(47);
+  it("registers all 48 tools", () => {
+    expect(tools.length).toBe(48);
   });
 
   it("every tool has a unique name", () => {
@@ -163,6 +163,43 @@ describe("Tool definitions", () => {
       expect(props).toContain("detail");
       expect(props).not.toContain("animation_type");
       expect(props).not.toContain("frame_count");
+    });
+  });
+
+  describe("read_image utility tool", () => {
+    it("exists and accepts file_path", () => {
+      const tool = tools.find((t) => t.name === "read_image")!;
+      expect(tool).toBeDefined();
+      const props = Object.keys(tool.inputSchema.properties as Record<string, unknown>);
+      expect(props).toContain("file_path");
+      expect(tool.inputSchema.required).toContain("file_path");
+    });
+
+    it("reads a PNG file and returns Base64Image object", async () => {
+      const { writeFileSync, rmSync } = await import("node:fs");
+      const { join } = await import("node:path");
+      const { rgbaToPng } = await import("../src/save-images.js");
+
+      const tmpFile = join(process.cwd(), "test_read_image_tmp.png");
+      const png = rgbaToPng(Buffer.alloc(4, 255), 1, 1);
+      writeFileSync(tmpFile, png);
+
+      try {
+        const tool = tools.find((t) => t.name === "read_image")!;
+        const result = await tool.handler(null as any, { file_path: tmpFile }) as any;
+
+        expect(result.image).toBeDefined();
+        expect(result.image.type).toBe("base64");
+        expect(result.image.format).toBe("png");
+        expect(result.image.base64.length).toBeGreaterThan(0);
+
+        // Verify the base64 decodes to valid PNG
+        const decoded = Buffer.from(result.image.base64, "base64");
+        expect(decoded[0]).toBe(0x89);
+        expect(decoded[1]).toBe(0x50);
+      } finally {
+        rmSync(tmpFile);
+      }
     });
   });
 

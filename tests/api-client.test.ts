@@ -1,5 +1,10 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
+import { rmSync } from "node:fs";
+import { join } from "node:path";
+import { tmpdir } from "node:os";
 import { PixelLabClient } from "../src/api-client.js";
+
+const LOG_FILE = join(tmpdir(), "pixellab-forge", "jobs.json");
 
 describe("PixelLabClient", () => {
   let client: PixelLabClient;
@@ -14,6 +19,7 @@ describe("PixelLabClient", () => {
   afterEach(() => {
     vi.useRealTimers();
     vi.restoreAllMocks();
+    try { rmSync(LOG_FILE); } catch {}
   });
 
   describe("GET requests", () => {
@@ -59,132 +65,40 @@ describe("PixelLabClient", () => {
       expect(result).toEqual({ image: "base64data" });
     });
 
-    it("polls on 202 with background_job_id", async () => {
-      let callCount = 0;
-      vi.stubGlobal("fetch", vi.fn().mockImplementation((url: string) => {
-        if (url.includes("/background-jobs/")) {
-          callCount++;
-          if (callCount < 3) {
-            return Promise.resolve({
-              ok: true,
-              status: 200,
-              json: () => Promise.resolve({ status: "processing" }),
-            });
-          }
-          return Promise.resolve({
-            ok: true,
-            status: 200,
-            json: () => Promise.resolve({ status: "completed", image: "done" }),
-          });
-        }
-        return Promise.resolve({
-          status: 202,
-          json: () => Promise.resolve({ background_job_id: "job-123" }),
-        });
+    it("returns immediately on 202 with background_job_id (non-blocking)", async () => {
+      vi.stubGlobal("fetch", vi.fn().mockResolvedValue({
+        status: 202,
+        json: () => Promise.resolve({ background_job_id: "job-123" }),
       }));
 
-      const promise = client.post("/generate-image-v2", {});
-      // Advance through 3 poll cycles (2s each)
-      for (let i = 0; i < 3; i++) {
-        await vi.advanceTimersByTimeAsync(2000);
-      }
-      const result = await promise as any;
-      expect(result.status).toBe("completed");
-      expect(result.image).toBe("done");
-      expect(callCount).toBe(3);
+      const result = await client.post("/generate-image-v2", {}) as any;
+      expect(result.status).toBe("processing");
+      expect(result.job_id).toBe("job-123");
+      expect(result.endpoint).toBe("/generate-image-v2");
+      expect(result.message).toContain("job-123");
     });
 
-    it("polls on 202 with job_id (legacy format)", async () => {
-      vi.stubGlobal("fetch", vi.fn().mockImplementation((url: string) => {
-        if (url.includes("/background-jobs/")) {
-          return Promise.resolve({
-            ok: true,
-            status: 200,
-            json: () => Promise.resolve({ status: "completed", data: "result" }),
-          });
-        }
-        return Promise.resolve({
-          status: 202,
-          json: () => Promise.resolve({ job_id: "legacy-job" }),
-        });
+    it("returns immediately on 202 with job_id (legacy format)", async () => {
+      vi.stubGlobal("fetch", vi.fn().mockResolvedValue({
+        status: 202,
+        json: () => Promise.resolve({ job_id: "legacy-job" }),
       }));
 
-      const promise = client.post("/create-tileset", {});
-      await vi.advanceTimersByTimeAsync(2000);
-      const result = await promise as any;
-      expect(result.status).toBe("completed");
-    });
-
-    it("handles 423 (still processing) during polling", async () => {
-      let pollCount = 0;
-      vi.stubGlobal("fetch", vi.fn().mockImplementation((url: string) => {
-        if (url.includes("/background-jobs/")) {
-          pollCount++;
-          if (pollCount === 1) {
-            return Promise.resolve({ status: 423 });
-          }
-          return Promise.resolve({
-            ok: true,
-            status: 200,
-            json: () => Promise.resolve({ status: "completed" }),
-          });
-        }
-        return Promise.resolve({
-          status: 202,
-          json: () => Promise.resolve({ background_job_id: "job-423" }),
-        });
-      }));
-
-      const promise = client.post("/test", {});
-      await vi.advanceTimersByTimeAsync(4000);
-      await promise;
-      expect(pollCount).toBe(2);
+      const result = await client.post("/create-tileset", {}) as any;
+      expect(result.status).toBe("processing");
+      expect(result.job_id).toBe("legacy-job");
     });
 
     it("logs job ID to stderr on 202", async () => {
-      vi.stubGlobal("fetch", vi.fn().mockImplementation((url: string) => {
-        if (url.includes("/background-jobs/")) {
-          return Promise.resolve({
-            ok: true,
-            status: 200,
-            json: () => Promise.resolve({ status: "completed" }),
-          });
-        }
-        return Promise.resolve({
-          status: 202,
-          json: () => Promise.resolve({ background_job_id: "logged-job" }),
-        });
+      vi.stubGlobal("fetch", vi.fn().mockResolvedValue({
+        status: 202,
+        json: () => Promise.resolve({ background_job_id: "logged-job" }),
       }));
 
-      const promise = client.post("/test", {});
-      await vi.advanceTimersByTimeAsync(2000);
-      await promise;
+      await client.post("/test", {});
       expect(stderrSpy).toHaveBeenCalledWith(
         expect.stringContaining("logged-job"),
       );
-    });
-
-    it("throws with job ID on poll failure", async () => {
-      vi.stubGlobal("fetch", vi.fn().mockImplementation((url: string) => {
-        if (url.includes("/background-jobs/")) {
-          return Promise.resolve({
-            ok: false,
-            status: 500,
-            text: () => Promise.resolve("Internal error"),
-          });
-        }
-        return Promise.resolve({
-          status: 202,
-          json: () => Promise.resolve({ background_job_id: "fail-job" }),
-        });
-      }));
-
-      // Attach the rejection handler BEFORE advancing timers
-      const promise = client.post("/test", {}).catch((e: Error) => e);
-      await vi.advanceTimersByTimeAsync(2000);
-      const error = await promise;
-      expect(error).toBeInstanceOf(Error);
-      expect((error as Error).message).toContain("fail-job");
     });
   });
 

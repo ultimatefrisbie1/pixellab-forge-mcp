@@ -10,6 +10,8 @@ import {
   logJobFailed,
   getPendingJobs,
   getJobLog,
+  getJobEndpoint,
+  getJobDescription,
 } from "../src/job-log.js";
 
 const LOG_DIR = join(tmpdir(), "pixellab-forge");
@@ -114,6 +116,25 @@ describe("Job log", () => {
     const ids = log.map((e) => e.id);
     expect(ids).not.toContain("old-job");
     expect(ids).toContain("new-job");
+  });
+
+  it("stores and retrieves job description", () => {
+    logJobStart("desc-job", "/generate-image-v2", "A glowing purple potion");
+
+    expect(getJobDescription("desc-job")).toBe("A glowing purple potion");
+    expect(getJobEndpoint("desc-job")).toBe("/generate-image-v2");
+  });
+
+  it("returns undefined description when not provided", () => {
+    logJobStart("no-desc-job", "/rotate");
+
+    expect(getJobDescription("no-desc-job")).toBeUndefined();
+    expect(getJobEndpoint("no-desc-job")).toBe("/rotate");
+  });
+
+  it("returns undefined for non-existent job", () => {
+    expect(getJobDescription("fake-job")).toBeUndefined();
+    expect(getJobEndpoint("fake-job")).toBeUndefined();
   });
 
   it("keeps pending jobs even if old", () => {

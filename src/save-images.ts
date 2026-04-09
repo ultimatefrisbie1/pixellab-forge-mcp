@@ -17,7 +17,7 @@ function makeFilename(toolName: string, index: number, id?: string): string {
 }
 
 /** Encode raw RGBA pixel data into a PNG file buffer */
-function rgbaToPng(rgba: Buffer, width: number, height: number): Buffer {
+export function rgbaToPng(rgba: Buffer, width: number, height: number): Buffer {
   // Each row gets a filter byte (0 = None) prepended
   const raw = Buffer.alloc(height * (1 + width * 4));
   for (let y = 0; y < height; y++) {
